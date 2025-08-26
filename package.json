@@ -1,0 +1,14 @@
+{
+  "name": "sistema-pedidos-frontend",
+  "version": "1.0.0",
+  "description": "Frontend do Sistema de Pedidos",
+  "scripts": {
+    "build": "echo 'Building static site' && exit 0"
+  },
+  "keywords": ["pedidos", "sistema", "frontend"],
+  "author": "Seu Nome",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.x"
+  }
+}
