@@ -142,12 +142,17 @@ async function atualizarTabela() {
 
 // salvar pedido
 async function salvarPedido() {
+  console.log('Botão salvar clicado'); // Debug 1
+  
   const cliente = document.getElementById('cliente').value.trim();
   const valor = document.getElementById('valor').value;
   let data = document.getElementById('data').value;
   const empresa = document.getElementById('empresa').value;
 
+  console.log('Valores do formulário:', { cliente, valor, data, empresa }); // Debug 2
+
   if (!cliente || !valor || !data || !empresa) {
+    console.log('Campos faltando'); // Debug 3
     mostrarNotificacao('Por favor, preencha todos os campos.', 'erro');
     return;
   }
@@ -158,39 +163,56 @@ async function salvarPedido() {
     data = `${yyyy}-${mm}-${dd}`;
   }
 
+  console.log('Dados para enviar:', { cliente, valor, data, empresa }); // Debug 4
+
   try {
+    let url, method;
+    
     if (modoEdicao) {
-      const response = await fetch(`${API_URL}/pedidos/${pedidoEditandoId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cliente, valor: Number(valor), data, empresa })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
-      }
-      
+      url = `${API_URL}/pedidos/${pedidoEditandoId}`;
+      method = 'PUT';
+      console.log('Modo edição - URL:', url); // Debug 5
+    } else {
+      url = `${API_URL}/pedidos`;
+      method = 'POST';
+      console.log('Modo criar - URL:', url); // Debug 6
+    }
+
+    const response = await fetch(url, {
+      method: method,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        cliente, 
+        valor: Number(valor), 
+        data, 
+        empresa 
+      })
+    });
+
+    console.log('Resposta do servidor - Status:', response.status); // Debug 7
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Erro completo da resposta:', errorText); // Debug 8
+      throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
+    }
+    
+    const responseData = await response.json();
+    console.log('Resposta do servidor - Dados:', responseData); // Debug 9
+
+    if (modoEdicao) {
       mostrarNotificacao('Pedido atualizado com sucesso!');
     } else {
-      const response = await fetch(`${API_URL}/pedidos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cliente, valor: Number(valor), data, empresa })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
-      }
-      
       mostrarNotificacao('Pedido salvo com sucesso!');
     }
     
     await atualizarTabela();
     esconderFormulario();
   } catch (e) {
-    console.error('Erro ao salvar pedido', e);
+    console.error('Erro completo ao salvar pedido:', e); // Debug 10
     mostrarNotificacao(`Falha ao salvar: ${e.message}`, 'erro');
   }
 }
