@@ -1,5 +1,5 @@
-
-const API_URL = 'https://sistema-pedidos-api-lmx8.onrender.com';
+// Configuração automática da API URL
+const API_URL = 'https://sistema-pedidos-api-lmx8.onrender.com'; // SUA URL DO RENDER
 
 let pedidos = [];
 let modoEdicao = false;
@@ -12,6 +12,9 @@ const semPedidos = document.getElementById('semPedidos');
 const formulario = document.getElementById('formulario');
 const overlay = document.getElementById('overlay');
 const modalExclusao = document.getElementById('modalExclusao');
+
+// Variável para controlar se já mostramos erro
+let erroMostrado = false;
 
 // Função para mostrar notificações
 function mostrarNotificacao(mensagem, tipo = 'sucesso') {
@@ -80,28 +83,38 @@ overlay.addEventListener('click', function(e) {
   }
 });
 
-// atualizar tabela com dados da API
-async function atualizarTabela() {
-  corpoTabela.innerHTML = '';
-  try {
-    const res = await fetch(`${API_URL}/pedidos`);
-    if (!res.ok) {
-      throw new Error(`Erro HTTP: ${res.status}`);
-    }
-    pedidos = await res.json();
-  } catch (e) {
-    console.error('Erro ao carregar pedidos', e);
-    mostrarNotificacao('Erro ao carregar pedidos. Verifique a conexão.', 'erro');
-    pedidos = [];
-  }
+// Função para filtrar pedidos
+function filtrarPedidos() {
+  const filtroStatus = document.getElementById('filtroStatus').value;
+  const filtroVendedor = document.getElementById('filtroVendedor').value;
+  
+  const pedidosFiltrados = pedidos.filter(pedido => {
+    const statusMatch = !filtroStatus || pedido.status === filtroStatus;
+    const vendedorMatch = !filtroVendedor || pedido.vendedor === filtroVendedor;
+    return statusMatch && vendedorMatch;
+  });
+  
+  renderizarPedidos(pedidosFiltrados);
+}
 
-  if (pedidos.length === 0) {
+// Função para renderizar pedidos (tabela + cards)
+function renderizarPedidos(listaPedidos = pedidos) {
+  renderizarTabela(listaPedidos);
+  renderizarCards(listaPedidos);
+  
+  // Mostrar/ocultar mensagem de sem pedidos
+  if (listaPedidos.length === 0) {
     semPedidos.style.display = 'block';
-    return;
+  } else {
+    semPedidos.style.display = 'none';
   }
-  semPedidos.style.display = 'none';
+}
 
-  pedidos.forEach(pedido => {
+// Renderizar tabela para desktop
+function renderizarTabela(listaPedidos) {
+  corpoTabela.innerHTML = '';
+  
+  listaPedidos.forEach(pedido => {
     const tr = document.createElement('tr');
     tr.dataset.id = pedido._id || pedido.id;
 
@@ -121,6 +134,8 @@ async function atualizarTabela() {
       <td>R$ ${Number(pedido.valor).toFixed(2)}</td>
       <td>${dataFormatada}</td>
       <td>${pedido.empresa}</td>
+      <td>${pedido.vendedor}</td>
+      <td><span class="status-badge status-${pedido.status.toLowerCase()}">${pedido.status}</span></td>
       <td class="acoes">
         <button type="button" class="btn-tabela-editar">Editar</button>
         <button type="button" class="btn-tabela-apagar">Excluir</button>
@@ -140,19 +155,86 @@ async function atualizarTabela() {
   });
 }
 
+// Renderizar cards para mobile
+function renderizarCards(listaPedidos) {
+  const cardsContainer = document.getElementById('pedidosCards');
+  if (!cardsContainer) return;
+  
+  cardsContainer.innerHTML = '';
+  
+  if (listaPedidos.length === 0) {
+    cardsContainer.innerHTML = '<p class="sem-pedidos">Nenhum pedido encontrado.</p>';
+    return;
+  }
+  
+  listaPedidos.forEach(pedido => {
+    const card = document.createElement('div');
+    card.className = `pedido-card ${pedido.status.toLowerCase()}`;
+    
+    const [yyyy, mm, dd] = pedido.data.split('-');
+    const dataFormatada = `${dd}/${mm}/${yyyy}`;
+    
+    card.innerHTML = `
+      <div class="pedido-info">
+        <div><strong>Cliente:</strong> ${pedido.cliente}</div>
+        <div><strong>Valor:</strong> R$ ${Number(pedido.valor).toFixed(2)}</div>
+        <div><strong>Data:</strong> ${dataFormatada}</div>
+        <div><strong>Empresa:</strong> ${pedido.empresa}</div>
+        <div><strong>Vendedor:</strong> ${pedido.vendedor}</div>
+        <div><strong>Status:</strong> <span class="status-badge status-${pedido.status.toLowerCase()}">${pedido.status}</span></div>
+      </div>
+      <div class="pedido-acoes">
+        <button type="button" class="btn-tabela-editar" onclick="editarPedido('${pedido._id || pedido.id}')">Editar</button>
+        <button type="button" class="btn-tabela-apagar" onclick="excluirPedido('${pedido._id || pedido.id}')">Excluir</button>
+      </div>
+    `;
+    
+    cardsContainer.appendChild(card);
+  });
+}
+
+// atualizar tabela com dados da API
+async function atualizarTabela() {
+  try {
+    const res = await fetch(`${API_URL}/pedidos`);
+    if (!res.ok) {
+      throw new Error(`Erro HTTP: ${res.status}`);
+    }
+    pedidos = await res.json();
+    
+    // Esconder mensagem de erro se existir
+    const notificacaoErro = document.getElementById('notificacao-sistema');
+    if (notificacaoErro && notificacaoErro.style.backgroundColor === 'rgb(244, 67, 54)') {
+      notificacaoErro.remove();
+    }
+    erroMostrado = false;
+    
+    renderizarPedidos(pedidos);
+    
+  } catch (e) {
+    console.error('Erro ao carregar pedidos', e);
+    
+    // Mostrar erro apenas uma vez
+    if (!erroMostrado) {
+      mostrarNotificacao('Erro ao carregar pedidos. Verifique a conexão.', 'erro');
+      erroMostrado = true;
+    }
+    
+    pedidos = [];
+    renderizarPedidos(pedidos);
+  }
+}
+
 // salvar pedido
 async function salvarPedido() {
-  console.log('Botão salvar clicado'); // Debug 1
-  
   const cliente = document.getElementById('cliente').value.trim();
   const valor = document.getElementById('valor').value;
   let data = document.getElementById('data').value;
   const empresa = document.getElementById('empresa').value;
+  const vendedor = document.getElementById('vendedor').value;
+  const status = document.getElementById('status').value;
 
-  console.log('Valores do formulário:', { cliente, valor, data, empresa }); // Debug 2
-
-  if (!cliente || !valor || !data || !empresa) {
-    console.log('Campos faltando'); // Debug 3
+  if (!cliente || !valor || !data || !empresa || !vendedor || !status) {
     mostrarNotificacao('Por favor, preencha todos os campos.', 'erro');
     return;
   }
@@ -163,56 +245,39 @@ async function salvarPedido() {
     data = `${yyyy}-${mm}-${dd}`;
   }
 
-  console.log('Dados para enviar:', { cliente, valor, data, empresa }); // Debug 4
-
   try {
-    let url, method;
-    
     if (modoEdicao) {
-      url = `${API_URL}/pedidos/${pedidoEditandoId}`;
-      method = 'PUT';
-      console.log('Modo edição - URL:', url); // Debug 5
-    } else {
-      url = `${API_URL}/pedidos`;
-      method = 'POST';
-      console.log('Modo criar - URL:', url); // Debug 6
-    }
-
-    const response = await fetch(url, {
-      method: method,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ 
-        cliente, 
-        valor: Number(valor), 
-        data, 
-        empresa 
-      })
-    });
-
-    console.log('Resposta do servidor - Status:', response.status); // Debug 7
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Erro completo da resposta:', errorText); // Debug 8
-      throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
-    }
-    
-    const responseData = await response.json();
-    console.log('Resposta do servidor - Dados:', responseData); // Debug 9
-
-    if (modoEdicao) {
+      const response = await fetch(`${API_URL}/pedidos/${pedidoEditandoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cliente, valor: Number(valor), data, empresa, vendedor, status })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+      }
+      
       mostrarNotificacao('Pedido atualizado com sucesso!');
     } else {
+      const response = await fetch(`${API_URL}/pedidos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cliente, valor: Number(valor), data, empresa, vendedor, status })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+      }
+      
       mostrarNotificacao('Pedido salvo com sucesso!');
     }
     
     await atualizarTabela();
     esconderFormulario();
   } catch (e) {
-    console.error('Erro completo ao salvar pedido:', e); // Debug 10
+    console.error('Erro ao salvar pedido', e);
     mostrarNotificacao(`Falha ao salvar: ${e.message}`, 'erro');
   }
 }
@@ -228,6 +293,8 @@ function editarPedido(id) {
   document.getElementById('valor').value = pedido.valor;
   document.getElementById('data').value = pedido.data;
   document.getElementById('empresa').value = pedido.empresa;
+  document.getElementById('vendedor').value = pedido.vendedor;
+  document.getElementById('status').value = pedido.status;
 
   mostrarFormulario();
 }
@@ -271,14 +338,6 @@ async function confirmarExclusao() {
   }
 }
 
-// eventos
-window.addEventListener('DOMContentLoaded', atualizarTabela);
-document.getElementById('btnAdicionar').addEventListener('click', mostrarFormulario);
-document.getElementById('btnCancelar').addEventListener('click', esconderFormulario);
-document.getElementById('btnSalvar').addEventListener('click', salvarPedido);
-document.getElementById('btnCancelarExclusao').addEventListener('click', fecharModal);
-document.getElementById('btnConfirmarExclusao').addEventListener('click', confirmarExclusao);
-
 // Verificar se a API está online
 async function verificarConexao() {
   try {
@@ -289,9 +348,36 @@ async function verificarConexao() {
     console.log('Conectado à API com sucesso');
   } catch (e) {
     console.error('Erro ao conectar com a API:', e);
-    mostrarNotificacao('Não foi possível conectar ao servidor. Verifique sua conexão.', 'erro');
+    // Não mostrar notificação imediatamente - vamos tentar carregar os pedidos primeiro
   }
 }
 
-// Verificar conexão quando a página carregar
-window.addEventListener('load', verificarConexao);
+// eventos
+document.getElementById('btnAdicionar').addEventListener('click', mostrarFormulario);
+document.getElementById('btnCancelar').addEventListener('click', esconderFormulario);
+document.getElementById('btnSalvar').addEventListener('click', salvarPedido);
+document.getElementById('btnCancelarExclusao').addEventListener('click', fecharModal);
+document.getElementById('btnConfirmarExclusao').addEventListener('click', confirmarExclusao);
+
+// Carregar pedidos quando a página carregar
+window.addEventListener('DOMContentLoaded', async () => {
+  // Primeiro tenta carregar os pedidos
+  await atualizarTabela();
+  
+  // Depois verifica a conexão (mas não mostra erro se já mostrou)
+  if (!erroMostrado) {
+    await verificarConexao();
+  }
+});
+
+// Mostrar/Ocultar a seção de pedidos
+document.addEventListener("DOMContentLoaded", () => {
+  const btnVerPedidos = document.getElementById("btnVerPedidos");
+  const sessaoPedidos = document.getElementById("sessaoPedidos");
+  btnVerPedidos.addEventListener("click", () => {
+    sessaoPedidos.style.display = sessaoPedidos.style.display === "none" ? "block" : "none";
+    if (sessaoPedidos.style.display === "block") {
+      atualizarTabela(); // Recarrega os pedidos quando expande a seção
+    }
+  });
+});

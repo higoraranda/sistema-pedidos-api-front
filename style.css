@@ -100,6 +100,12 @@ input, select {
   color: white;
 }
 
+.tabela-container {
+  overflow-x: auto;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -192,35 +198,126 @@ tr:hover {
   z-index: 999;
 }
 
+/* Filtros para mobile */
+.filtros-mobile {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filtros-mobile select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
+/* Cards para mobile */
+.pedido-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  border-left: 4px solid #4CAF50;
+}
+
+.pedido-card.pendente { border-left-color: #ff9800; }
+.pedido-card.aprovado { border-left-color: #4CAF50; }
+.pedido-card.entregue { border-left-color: #2196F3; }
+.pedido-card.cancelado { border-left-color: #f44336; }
+
+.pedido-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.pedido-info strong {
+  color: #333;
+}
+
+.pedido-acoes {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Badge de status */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+.status-pendente { background-color: #ff9800; }
+.status-aprovado { background-color: #4CAF50; }
+.status-entregue { background-color: #2196F3; }
+.status-cancelado { background-color: #f44336; }
+
+/* Responsividade */
 @media (max-width: 768px) {
+  .filtros-mobile {
+    flex-direction: column;
+  }
+  
+  .filtros-mobile select {
+    width: 100%;
+  }
+  
+  /* Esconde tabela em mobile */
+  table {
+    display: none;
+  }
+  
+  /* Mostra cards em mobile */
+  .pedidos-cards {
+    display: block;
+  }
+  
   .container {
     padding: 10px;
   }
-  table, thead, tbody, th, td, tr {
-    display: block;
-    width: 100%;
+  
+  .modal-conteudo {
+    width: 95%;
+    margin: 10px;
   }
-  tr {
-    margin-bottom: 15px;
-    border-bottom: 2px solid #eee;
+  
+  .pedido-info {
+    grid-template-columns: 1fr;
   }
-  td {
-    padding: 10px;
-    text-align: right;
-    position: relative;
-  }
-  td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 10px;
-    font-weight: bold;
-    text-align: left;
-  }
+  
   .botoes-principais {
     flex-direction: column;
     gap: 10px;
   }
-  .modal-conteudo {
-    width: 95%;
+}
+
+@media (min-width: 769px) {
+  /* Esconde cards em desktop */
+  .pedidos-cards {
+    display: none;
+  }
+  
+  /* Mostra tabela em desktop */
+  table {
+    display: table;
+  }
+}
+
+@media (max-width: 480px) {
+  .pedido-acoes {
+    flex-direction: column;
+  }
+  
+  .btn-tabela-editar,
+  .btn-tabela-apagar {
+    width: 100%;
+    text-align: center;
   }
 }
