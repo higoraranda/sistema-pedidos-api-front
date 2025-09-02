@@ -1,5 +1,5 @@
 // Configuração automática da API URL
-const API_URL = 'https://sistema-pedidos-api-lmx8.onrender.com'; // SUA URL DO RENDER
+const API_URL = 'https://sistema-pedidos-api-lmx8.onrender.com';
 
 let pedidos = [];
 let modoEdicao = false;
@@ -15,6 +15,55 @@ const modalExclusao = document.getElementById('modalExclusao');
 
 // Variável para controlar se já mostramos erro
 let erroMostrado = false;
+
+// Função para formatar valor em Real Brasileiro
+function formatarValorBR(valor) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(valor);
+}
+
+// Função para converter valor formatado para número
+function converterValorParaNumero(valorFormatado) {
+  // Remove "R$", pontos e substitui vírgula por ponto
+  const valorNumerico = valorFormatado
+    .replace('R$', '')
+    .replace('.', '')
+    .replace(',', '.')
+    .trim();
+  
+  return parseFloat(valorNumerico) || 0;
+}
+
+// Função para formatar input de valor em tempo real
+function formatarInputValor(input) {
+  // Remove tudo que não é número ou vírgula
+  let valor = input.value.replace(/[^\d,]/g, '');
+  
+  // Permite apenas uma vírgula
+  const partes = valor.split(',');
+  if (partes.length > 2) {
+    valor = partes[0] + ',' + partes.slice(1).join('');
+  }
+  
+  // Formata o valor
+  if (valor) {
+    // Separa parte inteira e decimal
+    let [inteira, decimal = ''] = valor.split(',');
+    
+    // Formata parte inteira com pontos
+    inteira = inteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    // Limita decimal a 2 dígitos
+    decimal = decimal.substring(0, 2);
+    
+    // Monta o valor formatado
+    input.value = decimal ? `R$ ${inteira},${decimal}` : `R$ ${inteira}`;
+  }
+}
 
 // Função para mostrar notificações
 function mostrarNotificacao(mensagem, tipo = 'sucesso') {
@@ -131,7 +180,7 @@ function renderizarTabela(listaPedidos) {
 
     tr.innerHTML = `
       <td>${pedido.cliente}</td>
-      <td>R$ ${Number(pedido.valor).toFixed(2)}</td>
+      <td>${formatarValorBR(pedido.valor)}</td>
       <td>${dataFormatada}</td>
       <td>${pedido.empresa}</td>
       <td>${pedido.vendedor}</td>
@@ -177,7 +226,7 @@ function renderizarCards(listaPedidos) {
     card.innerHTML = `
       <div class="pedido-info">
         <div><strong>Cliente:</strong> ${pedido.cliente}</div>
-        <div><strong>Valor:</strong> R$ ${Number(pedido.valor).toFixed(2)}</div>
+        <div><strong>Valor:</strong> ${formatarValorBR(pedido.valor)}</div>
         <div><strong>Data:</strong> ${dataFormatada}</div>
         <div><strong>Empresa:</strong> ${pedido.empresa}</div>
         <div><strong>Vendedor:</strong> ${pedido.vendedor}</div>
@@ -228,11 +277,14 @@ async function atualizarTabela() {
 // salvar pedido
 async function salvarPedido() {
   const cliente = document.getElementById('cliente').value.trim();
-  const valor = document.getElementById('valor').value;
+  const valorInput = document.getElementById('valor').value;
   let data = document.getElementById('data').value;
   const empresa = document.getElementById('empresa').value;
   const vendedor = document.getElementById('vendedor').value;
   const status = document.getElementById('status').value;
+
+  // Converte o valor formatado para número
+  const valor = converterValorParaNumero(valorInput);
 
   if (!cliente || !valor || !data || !empresa || !vendedor || !status) {
     mostrarNotificacao('Por favor, preencha todos os campos.', 'erro');
@@ -290,7 +342,7 @@ function editarPedido(id) {
   modoEdicao = true;
   pedidoEditandoId = id;
   document.getElementById('cliente').value = pedido.cliente;
-  document.getElementById('valor').value = pedido.valor;
+  document.getElementById('valor').value = formatarValorBR(pedido.valor);
   document.getElementById('data').value = pedido.data;
   document.getElementById('empresa').value = pedido.empresa;
   document.getElementById('vendedor').value = pedido.vendedor;
@@ -348,7 +400,6 @@ async function verificarConexao() {
     console.log('Conectado à API com sucesso');
   } catch (e) {
     console.error('Erro ao conectar com a API:', e);
-    // Não mostrar notificação imediatamente - vamos tentar carregar os pedidos primeiro
   }
 }
 
@@ -359,12 +410,24 @@ document.getElementById('btnSalvar').addEventListener('click', salvarPedido);
 document.getElementById('btnCancelarExclusao').addEventListener('click', fecharModal);
 document.getElementById('btnConfirmarExclusao').addEventListener('click', confirmarExclusao);
 
+// Adicionar evento de formatação ao input de valor
+document.getElementById('valor').addEventListener('input', function(e) {
+  formatarInputValor(e.target);
+});
+
+// Adicionar evento de foco para melhor UX
+document.getElementById('valor').addEventListener('focus', function(e) {
+  if (!e.target.value) {
+    e.target.value = 'R$ ';
+  }
+});
+
 // Carregar pedidos quando a página carregar
 window.addEventListener('DOMContentLoaded', async () => {
   // Primeiro tenta carregar os pedidos
   await atualizarTabela();
   
-  // Depois verifica a conexão (mas não mostra erro se já mostrou)
+  // Depois verifica a conexão
   if (!erroMostrado) {
     await verificarConexao();
   }
@@ -377,7 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btnVerPedidos.addEventListener("click", () => {
     sessaoPedidos.style.display = sessaoPedidos.style.display === "none" ? "block" : "none";
     if (sessaoPedidos.style.display === "block") {
-      atualizarTabela(); // Recarrega os pedidos quando expande a seção
+      atualizarTabela();
     }
   });
 });

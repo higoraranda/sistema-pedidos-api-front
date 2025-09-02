@@ -321,3 +321,23 @@ tr:hover {
     text-align: center;
   }
 }
+
+/* Melhoria para o input de valor */
+input[type="text"]#valor {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-align: right;
+}
+
+/* Placeholder color mais suave */
+input::placeholder {
+  color: #999;
+  font-weight: normal;
+}
+
+/* Foco no input */
+input:focus {
+  border-color: #2196F3;
+  box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+  outline: none;
+}
