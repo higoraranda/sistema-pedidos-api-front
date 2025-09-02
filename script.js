@@ -31,38 +31,39 @@ function converterValorParaNumero(valorFormatado) {
   // Remove "R$", pontos e substitui vírgula por ponto
   const valorNumerico = valorFormatado
     .replace('R$', '')
-    .replace('.', '')
+    .replace(/\./g, '')
     .replace(',', '.')
     .trim();
   
   return parseFloat(valorNumerico) || 0;
 }
 
-// Função para formatar input de valor em tempo real
+// Função para formatar input de valor em tempo real (CORRIGIDA)
 function formatarInputValor(input) {
-  // Remove tudo que não é número ou vírgula
-  let valor = input.value.replace(/[^\d,]/g, '');
+  // Salva a posição do cursor
+  const cursorPosition = input.selectionStart;
   
-  // Permite apenas uma vírgula
-  const partes = valor.split(',');
-  if (partes.length > 2) {
-    valor = partes[0] + ',' + partes.slice(1).join('');
+  // Remove tudo que não é número
+  let valor = input.value.replace(/[^\d]/g, '');
+  
+  // Adiciona zeros à esquerda para ter pelo menos 3 dígitos
+  while (valor.length < 3) {
+    valor = '0' + valor;
   }
   
-  // Formata o valor
-  if (valor) {
-    // Separa parte inteira e decimal
-    let [inteira, decimal = ''] = valor.split(',');
-    
-    // Formata parte inteira com pontos
-    inteira = inteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    
-    // Limita decimal a 2 dígitos
-    decimal = decimal.substring(0, 2);
-    
-    // Monta o valor formatado
-    input.value = decimal ? `R$ ${inteira},${decimal}` : `R$ ${inteira}`;
-  }
+  // Separa centavos dos reais
+  const reais = valor.slice(0, -2);
+  const centavos = valor.slice(-2);
+  
+  // Formata reais com pontos
+  const reaisFormatados = reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  
+  // Monta o valor formatado
+  input.value = `R$ ${reaisFormatados},${centavos}`;
+  
+  // Ajusta a posição do cursor
+  const newCursorPosition = cursorPosition + (input.value.length - input.value.replace(/[^\d]/g, '').length);
+  input.setSelectionRange(newCursorPosition, newCursorPosition);
 }
 
 // Função para mostrar notificações
@@ -410,15 +411,25 @@ document.getElementById('btnSalvar').addEventListener('click', salvarPedido);
 document.getElementById('btnCancelarExclusao').addEventListener('click', fecharModal);
 document.getElementById('btnConfirmarExclusao').addEventListener('click', confirmarExclusao);
 
-// Adicionar evento de formatação ao input de valor
+// Adicionar evento de formatação ao input de valor (CORRIGIDO)
 document.getElementById('valor').addEventListener('input', function(e) {
   formatarInputValor(e.target);
 });
 
 // Adicionar evento de foco para melhor UX
 document.getElementById('valor').addEventListener('focus', function(e) {
-  if (!e.target.value) {
-    e.target.value = 'R$ ';
+  if (!e.target.value || e.target.value === 'R$ ') {
+    e.target.value = 'R$ 0,00';
+    // Posiciona o cursor no início
+    e.target.setSelectionRange(3, 3);
+  }
+});
+
+// Adicionar evento de clique para facilitar a edição
+document.getElementById('valor').addEventListener('click', function(e) {
+  // Se o campo estiver vazio ou com valor padrão, seleciona tudo
+  if (!this.value || this.value === 'R$ 0,00') {
+    this.setSelectionRange(3, this.value.length);
   }
 });
 
